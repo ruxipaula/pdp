@@ -1,8 +1,9 @@
 package com.ppdlab3;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.stream.Collectors;
 
 public class Main {
     public static void main(String[] args) {
@@ -12,35 +13,26 @@ public class Main {
         int m = 3;
 
         createMatrices(matrix1, matrix2);
-
-//        for (int i = 0; i < n; i++) {
-//            matrix1.add(new ArrayList<>());
-//            matrix2.add(new ArrayList<>());
-//            for (int j = 0; j < m; j++) {
-//                matrix1.get(i).add(j + 1);
-//                matrix2.get(i).add(j - 1);
-//            }
-//        }
-
         MatrixUtilities mu = new MatrixUtilities(matrix1, matrix2, n, m);
 
-        for (int i = 0; i < n; i++) {
-            System.out.println(matrix1.get(i));
-        }
-        System.out.println();
-        for (int i = 0; i < n; i++) {
-            System.out.println(matrix2.get(i));
-        }
-        System.out.println();
-
         List<Thread> threads = new ArrayList<>();
-        for (int i = 0; i < 3; i++) {
+        List<List<Point>> results = new ArrayList<>();
+        int nrThreads = 3;
+        for (int i = 0; i < nrThreads; i++) {
             int pos = i;
-//            Thread t = new Thread(() -> mu.computePartialResultLines(pos, 0, pos, 2));
-            Thread t = new Thread(() -> mu.computePartialResultColumns(0, pos, 2, pos));
+            results.add(new ArrayList<>());
+//            Thread t = new Thread(() -> mu.computePartialResultLines(pos, 0, pos, 2, results.get(pos)));
+//            Thread t = new Thread(() -> mu.computePartialResultColumns(0, pos, 2, pos, results.get(pos)));
+            Thread t = new Thread(() -> mu.computePartialResultKElement(nrThreads, pos, results.get(pos)));
             threads.add(t);
         }
 
+        runWithThreads(threads, n, m);
+//        runWithThreadPool(threads, n, m);
+        printMatrices(mu, results);
+    }
+
+    public static void runWithThreads(List<Thread> threads, int n, int m) {
         for (Thread t : threads) {
             t.start();
         }
@@ -52,11 +44,44 @@ public class Main {
                 e.printStackTrace();
             }
         }
+    }
 
-        for (int i = 0; i < n; i++) {
+    public static void runWithThreadPool(List<Thread> threads, int n, int m) {
+        ExecutorService service = Executors.newFixedThreadPool(threads.size());
+        for(Thread t : threads) {
+            service.execute(t);
+        }
+
+        service.shutdown();
+    }
+
+    public static void printMatrices(MatrixUtilities mu, List<List<Point>> results) {
+        for (int i = 0; i < mu.getN() ; i++) {
+            System.out.println(mu.getMatrix1().get(i));
+        }
+        System.out.println();
+
+        for (int i = 0; i < mu.getN() ; i++) {
+            System.out.println(mu.getMatrix2().get(i));
+        }
+        System.out.println();
+
+        List<Point> matrix = new ArrayList<>();
+        for (List<Point> result: results) {
+            matrix.addAll(result);
+        }
+
+        Comparator<Point> compareByRow = Comparator.comparing( Point::getX );
+        Comparator<Point> compareByColumn = Comparator.comparing( Point::getY );
+        Comparator<Point> compareByPosition = compareByRow.thenComparing(compareByColumn);
+
+        List<Point> finalMatrix = matrix.stream().sorted(compareByPosition).collect(Collectors.toList());
+        Iterator<Point> iterator = finalMatrix.iterator();
+
+        for (int i = 0; i < mu.getN(); i++) {
             StringBuilder line = new StringBuilder();
-            for(int j = 0; j < m; j++) {
-                line.append(mu.getResult().get(i).get(j)).append(" ");
+            for(int j = 0; j < mu.getM(); j++) {
+                line.append(iterator.next().getValue()).append(" ");
             }
             System.out.println(line);
         }
