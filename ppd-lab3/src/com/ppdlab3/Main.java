@@ -9,26 +9,72 @@ public class Main {
     public static void main(String[] args) {
         List<List<Integer>> matrix1 = new ArrayList<>();
         List<List<Integer>> matrix2 = new ArrayList<>();
-        int n = 5;
-        int m = 5;
+        int n = 9;
+        int m = 9;
 
         createMatrices(matrix1, matrix2, n, m);
         MatrixUtilities mu = new MatrixUtilities(matrix1, matrix2, n, m);
 
         List<Thread> threads = new ArrayList<>();
         List<List<Point>> results = new ArrayList<>();
-        for (int i = 0; i < n; i++) {
-            int pos = i;
+        int nrThreads = 6;
+        for (int i = 0; i < nrThreads; i++) {
             results.add(new ArrayList<>());
-//            Thread t = new Thread(() -> mu.computePartialResultLines(pos, 0, pos, n-1, results.get(pos)));
-            Thread t = new Thread(() -> mu.computePartialResultColumns(0, pos, m-1, pos, results.get(pos)));
-//            Thread t = new Thread(() -> mu.computePartialResultKElement(nrThreads, pos, results.get(pos)));
+        }
+
+//        createWorkload1(results, n, m, nrThreads);
+//        createWorkload2(results, n, m, nrThreads);
+        createWorkload3(results, n, m, nrThreads);
+
+        for (int i = 0; i < nrThreads; i++) {
+            int pos = i;
+            Thread t = new Thread(() -> mu.computePartialResult(results.get(pos)));
             threads.add(t);
         }
 
-        runWithThreads(threads, n, m);
-//        runWithThreadPool(threads, n, m);
+//        runWithThreads(threads, n, m);
+        runWithThreadPool(threads, n, m);
         printMatrices(mu, results);
+    }
+
+    public static void createWorkload1(List<List<Point>> results, int n, int m, int nrThreads) {
+        int elemsForEachThread = m * n / nrThreads;
+        for (int row = 0; row < n; row++) {
+            for (int col = 0; col < m; col++) {
+                int index = row * m + col;
+                int thread = index / elemsForEachThread;
+                if (thread == results.size()) {
+                    results.get(nrThreads - 1).add(new Point(row, col, -1));
+                } else {
+                    results.get(thread).add(new Point(row, col, -1));
+                }
+            }
+        }
+    }
+
+    public static void createWorkload2(List<List<Point>> results, int n, int m, int nrThreads) {
+        int elemsForEachThread = m * n / nrThreads;
+        for (int row = 0; row < n; row++) {
+            for (int col = 0; col < m; col++) {
+                int index = col * n + row;
+                int thread = index / elemsForEachThread;
+                if (thread == results.size()) {
+                    results.get(nrThreads - 1).add(new Point(row, col, -1));
+                } else {
+                    results.get(thread).add(new Point(row, col, -1));
+                }
+            }
+        }
+    }
+
+    public static void createWorkload3(List<List<Point>> results, int n, int m, int nrThreads) {
+        for (int row = 0; row < n; row++) {
+            for (int col = 0; col < m; col++) {
+                int index = row * m + col;
+                int thread = index % nrThreads;
+                results.get(thread).add(new Point(row, col, -1));
+            }
+        }
     }
 
     public static void runWithThreads(List<Thread> threads, int n, int m) {
@@ -45,36 +91,41 @@ public class Main {
             }
         }
         long end = System.nanoTime();
-        System.out.println("Results: " + (end - start) + ", " + threads.size() + " threads");
+        System.out.println("Time: " + (end - start) + ", " + threads.size() + " threads");
     }
 
     public static void runWithThreadPool(List<Thread> threads, int n, int m) {
-        ExecutorService service = Executors.newFixedThreadPool(threads.size());
-        for(Thread t : threads) {
+        int nrThreads = 4;
+        ExecutorService service = Executors.newFixedThreadPool(nrThreads);
+
+        long start = System.nanoTime();
+        for (Thread t : threads) {
             service.execute(t);
         }
 
         service.shutdown();
+        long end = System.nanoTime();
+        System.out.println("Time: " + (end - start) + ", " + threads.size() + " tasks, " + nrThreads + " threads - THREAD POOL");
     }
 
     public static void printMatrices(MatrixUtilities mu, List<List<Point>> results) {
-        for (int i = 0; i < mu.getN() ; i++) {
+        for (int i = 0; i < mu.getN(); i++) {
             System.out.println(mu.getMatrix1().get(i));
         }
         System.out.println();
 
-        for (int i = 0; i < mu.getN() ; i++) {
+        for (int i = 0; i < mu.getN(); i++) {
             System.out.println(mu.getMatrix2().get(i));
         }
         System.out.println();
 
         List<Point> matrix = new ArrayList<>();
-        for (List<Point> result: results) {
+        for (List<Point> result : results) {
             matrix.addAll(result);
         }
 
-        Comparator<Point> compareByRow = Comparator.comparing( Point::getX );
-        Comparator<Point> compareByColumn = Comparator.comparing( Point::getY );
+        Comparator<Point> compareByRow = Comparator.comparing(Point::getX);
+        Comparator<Point> compareByColumn = Comparator.comparing(Point::getY);
         Comparator<Point> compareByPosition = compareByRow.thenComparing(compareByColumn);
 
         List<Point> finalMatrix = matrix.stream().sorted(compareByPosition).collect(Collectors.toList());
@@ -82,7 +133,7 @@ public class Main {
 
         for (int i = 0; i < mu.getN(); i++) {
             StringBuilder line = new StringBuilder();
-            for(int j = 0; j < mu.getM(); j++) {
+            for (int j = 0; j < mu.getM(); j++) {
                 line.append(iterator.next().getValue()).append(" ");
             }
             System.out.println(line);

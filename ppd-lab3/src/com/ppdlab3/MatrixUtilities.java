@@ -23,63 +23,11 @@ public class MatrixUtilities {
         return result;
     }
 
-    public void computePartialResultLines(int startX, int startY, int endX, int endY, List<Point> result) {
-        for (int i = startX; i <= endX; i++) {
-            int firstColumn;
-            if (i == startX) {
-                firstColumn = startY;
-            } else {
-                firstColumn = 0;
-            }
-            int lastColumn;
-            if (i == endX) {
-                lastColumn = endY;
-            } else {
-                lastColumn = m - 1;
-            }
-
-            for (int j = firstColumn; j <= lastColumn; j++) {
-                int element = constructOneElement(i, j);
-                result.add(new Point(i, j, element));
-            }
+    public void computePartialResult(List<Point> result) {
+        for(Point p: result) {
+            int elem = constructOneElement(p.getX(), p.getY());
+            p.setValue(elem);
         }
-    }
-
-    public void computePartialResultColumns(int startX, int startY, int endX, int endY, List<Point> result) {
-        for (int j = startY; j <= endY; j++) {
-            int firstRow;
-            if (j == startY) {
-                firstRow = startX;
-            } else {
-                firstRow = 0;
-            }
-            int lastRow;
-            if (j == endY) {
-                lastRow = endX;
-            } else {
-                lastRow = n - 1;
-            }
-
-            for (int i = firstRow; i <= lastRow; i++) {
-                int element = constructOneElement(i, j);
-                result.add(new Point(i, j, element));
-            }
-        }
-    }
-
-    public void computePartialResultKElement(int k, int threadNr, List<Point> result) {
-        for (int i = 0; i < n; i++) {
-            for (int j = 0; j < m; j++) {
-                if(index(i, j) % k == threadNr) {
-                    int element = constructOneElement(i, j);
-                    result.add(new Point(i, j, element));
-                }
-            }
-        }
-    }
-
-    private int index(int row, int col) {
-        return row * m + col;
     }
 
     public List<List<Integer>> getMatrix1() {
